@@ -5,6 +5,8 @@ import numpy as np
 import pandas as pd
 import random
 
+from torch.autograd.grad_mode import F
+
 
 # create LSTM
 class LSTMModel(nn.Module):
@@ -20,9 +22,10 @@ class LSTMModel(nn.Module):
         self.lstm3 = nn.RNN(1000, 500, layer_dim, batch_first=True)
 
         # Readout layer
-        self.fc = nn.Linear(input_dim*50, 100)
-        self.fc1 = nn.Linear(100, 50)
-        self.fc2 = nn.Linear(50, 2)
+        self.fc = nn.Linear(500, 200)
+        self.fc1 = nn.Linear(200, 100)
+        self.fc2 = nn.Linear(100, 50)
+        self.fc3 = nn.Linear(50, 2)
 
         # activation
         self.activation = torch.nn.LeakyReLU()
@@ -39,25 +42,21 @@ class LSTMModel(nn.Module):
     # the size of input is [batch_size, seq_len(15), input_dim(75)]
     # the size of logits is [batch_size, num_class]
     def forward(self, _input):
-        # the size of rnn_outputs is [batch_size, seq_len, rnn_size]
-        # self.recurrent_layer.flatten_parameters()
-        # output, _ = self.lstm(_input)
-        # output, _ = self.lstm1(output)
-        # output = self.sigmoid(output)
-        # output, _ = self.lstm2(output)
-        # output, _ = self.lstm3(output)
-        # classify the last step of rnn_outpus
-        # the size of logits is [batch_size, num_class]
-        # output = self.fc(output[:, -1])
-        output = self.flatten(_input)
-        output = self.fc(output)
-        output = self.activation(output)
+        output, _ = self.lstm(_input)
+        output, _ = self.lstm1(output)
         output = self.sigmoid(output)
+        output, _ = self.lstm2(output)
+        output, _ = self.lstm3(output)
+        output = self.fc(output[:, -1])
         output = self.fc1(output)
         output = self.activation(output)
+        output = self.sigmoid(output)
         output = self.fc2(output)
+        output = self.activation(output)
+        output = self.fc3(output)
         output = self.softmax(output)
         output = self.sigmoid(output)
+        # print(output[0])
         return output
 
 
@@ -132,7 +131,7 @@ if __name__ == '__main__':
     df = pd.read_csv('pre_processed.csv', index_col='time')
 
     # instantiate the LSTM
-    model = LSTMModel(len(df.columns), 50, 10)
+    model = LSTMModel(len(df.columns), 10)
     model.eval()
     trn_dl = getDataSet("pre_processed.csv", sec_len=1, batch_size=1)
     last_in, _ = trn_dl.__iter__().__next__()

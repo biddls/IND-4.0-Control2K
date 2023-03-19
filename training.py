@@ -17,7 +17,7 @@ model = util.LSTMModel(len(df.columns), 1)
 model.to(device)
 
 
-learning_rate = 0.0001
+learning_rate = 1e-3
 n_epochs = 100000
 patience, trials = 100, 0
 criterion = nn.CrossEntropyLoss()
@@ -29,7 +29,7 @@ opt = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9, weight
 model.train()
 
 losses = []
-batch_size = 100
+batch_size = 1000
 sec_len = 50
 trn_dl = util.getDataSet("pre_processed.csv", sec_len=sec_len, batch_size=batch_size)
 
