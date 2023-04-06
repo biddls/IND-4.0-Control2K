@@ -4,6 +4,7 @@ from datetime import datetime as dt
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 
+
 def loadIntoOneFile(logging=False):
     if logging:
         p = lambda _: print(_)
@@ -35,7 +36,7 @@ def loadIntoOneFile(logging=False):
                 date_time = date_time.replace("Z", "0Z")
             data[index][0] = dt.fromisoformat(date_time[:-1])
         except ValueError as e:
-            p(data[index-2])
+            p(data[index - 2])
             p(f"{index=}, {value=}, {len(value[0])=}")
             p(f"{date_time=} {len(date_time)=}\n")
             raise ValueError(e)
@@ -51,7 +52,7 @@ def loadIntoOneFile(logging=False):
         indexLookup[device] = i
     # loop through the lists
     for time, device, value in tqdm(data, disable=logging):
-        temp = [0]*len(cols)
+        temp = [0] * len(cols)
         temp[0] = time
         try:
             temp[indexLookup[device]] = value
@@ -67,7 +68,8 @@ def loadIntoOneFile(logging=False):
     df.to_csv('combined.csv', index=False)
     return df
 
-def interpolate(df: pd.DataFrame|str):
+
+def interpolate(df='combined.csv', normalise=True, name='pre_processed.csv'):
     if isinstance(df, str):
         df = pd.read_csv(df)
     print(len(df))
@@ -79,15 +81,17 @@ def interpolate(df: pd.DataFrame|str):
         pd.Grouper(key='time', freq='10S')
     ).mean()
     df.dropna(inplace=True)
-    df = (df - df.mean()) / df.std()
+    if normalise:
+        df = (df - df.mean()) / df.std()
     df.dropna(axis=1, inplace=True, how='all')
     df.fillna(0, inplace=True)
-    df.to_csv('pre_processed.csv', index=True)
+    df.to_csv(name, index=True)
     return df
+
 
 if __name__ == '__main__':
     # df = loadIntoOneFile(logging=True)
-    df = interpolate('combined.csv')
+    df = interpolate(df='combined.csv', normalise=False, name='pre_processed2.csv')
     print(len(df))
     print(df.head())
     print(df.tail())

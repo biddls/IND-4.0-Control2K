@@ -2,6 +2,6 @@ venv
 data
 .idea
 __pycache__
-combined.csv
-pre_processed.csv
-Sensor value ranges_v4.xlsx
+wandb
+*.csv
+*.xlsx
