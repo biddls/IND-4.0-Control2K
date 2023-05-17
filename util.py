@@ -9,85 +9,67 @@ from torch.autograd import Variable
 
 # create LSTM
 class LSTMModel(nn.Module):
-    def __init__(self, input_dim, layer_dim):
+    def __init__(self, input_dim):
         super(LSTMModel, self).__init__()
 
-        # Building your LSTM
-        self.lstm = nn.RNN(input_dim, 100, layer_dim, batch_first=True)
-        self.lstm1 = nn.RNN(100, 20, layer_dim, batch_first=True)
+        # Building RNN
+        self.rnn = nn.RNN(input_dim, 50, 1, batch_first=True)
 
         # Readout layer
-        self.fc = nn.Linear(20, 10)
-        self.fc1 = nn.Linear(10, 2)
+        self.fc1 = nn.Linear(50, input_dim)
 
         # softmax
         self.softmax = torch.nn.Softmax(dim=1)
 
     def forward(self, _input):
-        output, _ = self.lstm(_input)
-        output, _ = self.lstm1(output)
-
-        output = self.fc(output[:, -1])
-
-        output = self.fc1(output)
+        output, _ = self.rnn(_input)
+        output = self.fc1(output[:, -1])
         output = self.softmax(output)
         return output
-
-
-def cosine(t_max, eta_min: (int, float) = 0):
-    def scheduler(epoch, base_lr):
-        t = epoch % t_max
-        return eta_min + (base_lr - eta_min) * (1 + np.cos(np.pi * t / t_max)) / 2
-
-    return scheduler
-
 
 class IterDataset(data.IterableDataset):
     def __init__(self, file: str, _sec_len: int = 50, batch_size: int = 200, _norm=False):
         df = pd.read_csv(file, index_col='time')
         length = len(df)
+
         columCount = len(df.columns)
-        df = df.to_numpy()
-        # columns = df.columns
+        # print(columCount)
+
+        self.df = df.to_numpy()
         self.sec_len = _sec_len
         self.batch_size = batch_size
         self.norm = _norm
 
         def genData(_sec_len, batch_size, norm) -> (torch.Tensor, torch.Tensor):
             for x in range(batch_size):
-                if bool(random.getrandbits(1)):
-                    # print("RANDOM")
-                    # replace the column with noise
-                    df_subset = np.random.normal(0, 1, (_sec_len, columCount))
-                    # df_subset[:, choice] = np.ones(_sec_len)*10
+                # print("REAL")
+                # selects a subset of rows to analise
+                rows = random.randrange(length - _sec_len)
+                df_subset = self.df[rows:rows + _sec_len, :]
 
-                    # convert to numpy array and then to tensor
-                    df_subset = torch.from_numpy(df_subset)
+                if norm:
+                    # normalise the data
+                    _std = df_subset.std(axis=0)
+                    _std = ((_std == 0) * df_subset.mean(axis=0))+_std
+                    df_subset = (df_subset - df_subset.mean(axis=0)) / _std
 
-                    # create the answer tensor
-                    answer = [0, 1]
-                    # return the subset of data and the answer
-                    yield Variable(df_subset.float()), Variable(torch.tensor(answer).float())
-                else:
-                    # print("REAL")
-                    # selects a subset of rows to analise
-                    rows = random.randrange(length - _sec_len)
-                    df_subset = df[rows:rows + _sec_len, :]
+                # print(f"{df_subset.shape=}")
 
-                    if norm:
-                        # normalise the data
-                        _std = df_subset.std(axis=0)
-                        _std = ((_std == 0) * df_subset.mean(axis=0))+_std
-                        df_subset = (df_subset - df_subset.mean(axis=0)) / _std
+                # pick random number between 0 and columCount
+                random_number = random.randrange(columCount)
 
-                    # convert to numpy array and then to tensor
-                    df_subset = torch.from_numpy(df_subset)
+                df_subset[:, random_number] += np.random.normal(0, 10, _sec_len)
 
-                    # create the answer tensor
-                    answer = [1, 0]
+                # convert to numpy array and then to tensor
+                df_subset = torch.from_numpy(df_subset)
 
-                    # return the subset of data and the answer
-                    yield Variable(df_subset.float()), Variable(torch.tensor(answer).float())
+                # create the answer tensor
+                answer = [0] * columCount
+                answer[random_number] = 1
+
+
+                # return the subset of data and the answer
+                yield Variable(df_subset.float()), Variable(torch.tensor(answer).float())
 
         self.generator = genData
 
