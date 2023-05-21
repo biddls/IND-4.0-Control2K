@@ -2,6 +2,8 @@ venv
 data
 .idea
 __pycache__
+tf/__pycache__
+pico/__pycache__
 wandb
 *.csv
 *.xlsx
